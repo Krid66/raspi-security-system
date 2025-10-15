@@ -1,26 +1,38 @@
 import RPi.GPIO as GPIO
 import time
 
-# กำหนดพิน
 PIR_PIN = 17
 BUZZER_PIN = 18
+BUZZER_FREQUENCY = 1000
+BUZZER_DURATION = 1
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(PIR_PIN, GPIO.IN)
 GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
+motion_detected = False
+
 print("ระบบกันขโมยเริ่มทำงาน...")
 
 try:
     while True:
-        if GPIO.input(PIR_PIN):   # ถ้ามีการเคลื่อนไหว
-            print("ตรวจพบการเคลื่อนไหว!")
-            GPIO.output(BUZZER_PIN, GPIO.HIGH)  # เปิดเสียง buzzer
-            time.sleep(1)
+        if GPIO.input(PIR_PIN):
+            if not motion_detected:
+                print("ตรวจพบการเคลื่อนไหว!")
+                # ใช้ PWM แบบ local object แทน global
+                buzzer = GPIO.PWM(BUZZER_PIN, BUZZER_FREQUENCY)
+                buzzer.start(50)
+                time.sleep(BUZZER_DURATION)
+                buzzer.stop()
+                buzzer = None  # ป้องกัน destructor เรียก stop อีกครั้ง
+                motion_detected = True
         else:
-            GPIO.output(BUZZER_PIN, GPIO.LOW)   # ปิด buzzer
+            motion_detected = False
         time.sleep(0.1)
 
 except KeyboardInterrupt:
+    print("หยุดการทำงาน...")
+
+finally:
     GPIO.cleanup()
-    print("หยุดการทำงาน")
+    print("GPIO ถูกเคลียร์เรียบร้อยแล้ว")
